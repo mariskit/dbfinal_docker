@@ -10,7 +10,7 @@ services:
       MYSQL_USER: clinic_user
       MYSQL_PASSWORD: clinic_password
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -33,6 +33,10 @@ services:
       - DB_NAME=clinic_db
       - NEXTAUTH_SECRET=my-super-secret-key-for-clinic-app
       - NEXTAUTH_URL=http://localhost:3000
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - NODE_ENV=development
+      - WATCHPACK_POLLING=true
     depends_on:
       mysql:
         condition: service_healthy
@@ -42,7 +46,17 @@ services:
       - ./app:/app
       - /app/node_modules
       - /app/.next
+      - /app/.next/cache
     restart: unless-stopped
+    stdin_open: true
+    tty: true
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
+    command: sh -c "trap 'exit 0' SIGTERM SIGINT; npm run dev"
 
 volumes:
   mysql_data:

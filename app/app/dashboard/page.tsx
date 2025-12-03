@@ -12,9 +12,7 @@ import {
   UserIcon,
   ChartBarIcon,
   BellIcon,
-  QuestionMarkCircleIcon,
 } from "@heroicons/react/24/outline";
-import Navbar from "@/components/Navbar";
 
 interface DashboardCard {
   title: string;
@@ -62,14 +60,6 @@ export default function DashboardPage() {
         href: "/dashboard/notifications",
         color: "text-yellow-600",
         bgColor: "bg-yellow-50 hover:bg-yellow-100",
-      },
-      {
-        title: "Ayuda",
-        description: "Centro de ayuda y soporte",
-        icon: QuestionMarkCircleIcon,
-        href: "/help",
-        color: "text-gray-600",
-        bgColor: "bg-gray-50 hover:bg-gray-100",
       },
     ];
 
@@ -161,9 +151,7 @@ export default function DashboardPage() {
   const dashboardCards = getDashboardCards();
 
   return (
-    <>
-      <Navbar />
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
       {/* Header */}
       <div className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -307,6 +295,5 @@ export default function DashboardPage() {
         </div>
       </div>
     </div>
-    </>
   );
 }

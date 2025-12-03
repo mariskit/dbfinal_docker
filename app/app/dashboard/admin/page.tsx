@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { useAuthContext } from "@/hooks/AuthProvider";
 import UserManagement from "@/components/UserManagement";
 import DoctorSchedule from "@/components/DoctorSchedule";
+import Reports from "@/components/Reports";
+import SpecialtiesManagement from "@/components/SpecialtiesManagement";
+import AppointmentsManagement from "@/components/AppointmentsManagement";
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("users");
@@ -56,6 +59,8 @@ export default function AdminDashboard() {
             <nav className="-mb-px flex space-x-8">
               {[
                 { id: "users", name: "Gestión de Usuarios" },
+                { id: "appointments", name: "Gestión de Citas" },
+                { id: "specialties", name: "Especialidades" },
                 { id: "doctors", name: "Médicos" },
                 { id: "schedules", name: "Horarios" },
                 { id: "reports", name: "Reportes" },
@@ -79,6 +84,10 @@ export default function AdminDashboard() {
           <div>
             {activeTab === "users" && <UserManagement />}
 
+            {activeTab === "appointments" && <AppointmentsManagement />}
+
+            {activeTab === "specialties" && <SpecialtiesManagement />}
+
             {activeTab === "doctors" && (
               <div className="card">
                 <h3 className="text-xl font-semibold mb-4">
@@ -101,87 +110,7 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {activeTab === "reports" && (
-              <div className="card">
-                <h3 className="text-xl font-semibold mb-4">
-                  Reportes del Sistema
-                </h3>
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                  <div className="border rounded-lg p-4 text-center">
-                    <div className="text-2xl font-bold text-blue-600">150</div>
-                    <div className="text-gray-600">Citas Totales</div>
-                  </div>
-                  <div className="border rounded-lg p-4 text-center">
-                    <div className="text-2xl font-bold text-green-600">125</div>
-                    <div className="text-gray-600">Citas Completadas</div>
-                  </div>
-                  <div className="border rounded-lg p-4 text-center">
-                    <div className="text-2xl font-bold text-red-600">25</div>
-                    <div className="text-gray-600">Citas Canceladas</div>
-                  </div>
-                  <div className="border rounded-lg p-4 text-center">
-                    <div className="text-2xl font-bold text-purple-600">5</div>
-                    <div className="text-gray-600">Médicos Activos</div>
-                  </div>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div>
-                    <h4 className="font-semibold mb-3">Citas por Mes</h4>
-                    <div className="space-y-2">
-                      {[
-                        "Enero",
-                        "Febrero",
-                        "Marzo",
-                        "Abril",
-                        "Mayo",
-                        "Junio",
-                      ].map((mes, index) => (
-                        <div key={mes} className="flex items-center">
-                          <div className="w-24 text-sm text-gray-600">
-                            {mes}
-                          </div>
-                          <div className="flex-1 bg-gray-200 rounded-full h-4">
-                            <div
-                              className="bg-blue-500 rounded-full h-4"
-                              style={{ width: `${(index + 1) * 15}%` }}
-                            ></div>
-                          </div>
-                          <div className="w-10 text-right text-sm font-medium">
-                            {(index + 1) * 15}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="font-semibold mb-3">
-                      Especialidades Populares
-                    </h4>
-                    <div className="space-y-2">
-                      {[
-                        { name: "Medicina General", count: 45 },
-                        { name: "Cardiología", count: 35 },
-                        { name: "Pediatría", count: 30 },
-                        { name: "Dermatología", count: 25 },
-                        { name: "Ginecología", count: 15 },
-                      ].map((item) => (
-                        <div
-                          key={item.name}
-                          className="flex items-center justify-between"
-                        >
-                          <span className="text-sm">{item.name}</span>
-                          <span className="text-sm font-medium">
-                            {item.count}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+            {activeTab === "reports" && <Reports />}
           </div>
         </div>
       </div>

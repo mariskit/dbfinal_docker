@@ -16,7 +16,8 @@ export default function RootLayout({
     <html lang="es">
       <body className="bg-gray-50">
         <AuthProvider>
-          <div className="min-h-screen ">
+          <Navbar />
+          <div className="min-h-screen">
             {children}
           </div>
         </AuthProvider>

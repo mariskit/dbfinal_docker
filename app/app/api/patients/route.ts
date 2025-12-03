@@ -1,19 +1,47 @@
 import { NextResponse } from "next/server";
 import { getConnection } from "@/lib/database";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const patientId = searchParams.get("patient_id");
+    const doctorId = searchParams.get("doctor_id");
     const connection = await getConnection();
 
-    const [patients] = await connection.execute(`
-      SELECT p.*, u.email, u.username
-      FROM Patients p
-      JOIN Users u ON p.user_id = u.user_id
-      WHERE u.role = 'patient'
-      ORDER BY p.last_name, p.first_name
-    `);
+    // Si se filtra por doctor, usar procedimiento almacenado
+    if (doctorId) {
+      try {
+        const [patients]: any = await connection.query(
+          `CALL sp_GetDoctorPatients(?)`,
+          [doctorId]
+        );
+        
+        // Los procedimientos almacenados retornan múltiples result sets
+        const result = patients[0] || [];
+        
+        return NextResponse.json(result);
+      } catch (spError) {
+        console.warn("Stored procedure failed, using view instead:", spError);
+        // Continuar con vista normal
+      }
+    }
 
-    return NextResponse.json(patients);
+    // Usar vista optimizada para obtener pacientes
+    let query = `
+      SELECT * FROM vw_PatientsComplete WHERE role = 'patient'
+    `;
+    const params: any[] = [];
+
+    if (patientId) {
+      query += " AND patient_id = ?";
+      params.push(patientId);
+    }
+
+    query += " ORDER BY last_name, first_name";
+
+    const [patients] = await connection.execute(query, params);
+
+    return NextResponse.json(patientId ? (patients as any[])[0] || null : patients);
   } catch (error) {
     console.error("Error fetching patients:", error);
     return NextResponse.json(
@@ -29,7 +57,7 @@ export async function POST(request: Request) {
       await request.json();
     const connection = await getConnection();
 
-    const [result] = await connection.execute(
+    const [result]: any = await connection.execute(
       `INSERT INTO Patients 
        (user_id, first_name, last_name, birthdate, phone, address) 
        VALUES (?, ?, ?, ?, ?, ?)`,
@@ -38,7 +66,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       message: "Paciente creado exitosamente",
-      patient_id: (result as any).insertId,
+      patient_id: result.insertId,
     });
   } catch (error) {
     console.error("Error creating patient:", error);

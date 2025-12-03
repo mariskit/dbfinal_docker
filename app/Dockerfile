@@ -1,28 +1,30 @@
-# 1. Builder
-FROM node:18 AS builder
+FROM node:18-alpine
 
 WORKDIR /app
 
-# Solo copiamos package.json y lock para usar cache
+# Instalar dependencias del sistema necesarias
+RUN apk add --no-cache libc6-compat
+
+# Copiar archivos de dependencias primero para mejor caching
 COPY package*.json ./
 
-# Esto se cachea y es MUCHO más rápido
-RUN npm ci --omit=dev
+# Instalar todas las dependencias
+RUN npm ci --legacy-peer-deps
 
-# Ahora copiar todo el proyecto
+# Copiar el resto de los archivos
 COPY . .
 
-# Build productivo
-RUN npm run build
+# Exponer el puerto
+EXPOSE 3000
 
-# 2. Runtime final
-FROM node:18-slim AS runner
+# Variables de entorno para Next.js
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+ENV NODE_ENV=development
+ENV NEXT_TELEMETRY_DISABLED=1
 
-WORKDIR /app
+# Aumentar límites de memoria de Node.js
+ENV NODE_OPTIONS="--max-old-space-size=2048"
 
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/node_modules ./node_modules
-
-CMD ["npm", "start"]
+# Comando por defecto con mejor manejo de señales y reinicio automático
+CMD ["sh", "-c", "trap 'exit 0' SIGTERM SIGINT; npm run dev & wait"]

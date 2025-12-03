@@ -2,27 +2,29 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import { useAuthContext } from "@/hooks/AuthProvider";
 import type { Appointment } from "@/lib/types";
 
 function AppointmentsContent() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const searchParams = useSearchParams();
-  const isDoctorView = searchParams.get("doctor") === "true";
+  const { isDoctor, isAdmin, isPatient, user } = useAuthContext();
+  const isDoctorView = searchParams.get("doctor") === "true" || isDoctor;
 
   useEffect(() => {
-    fetchAppointments();
-  }, []);
+    if (user) {
+      fetchAppointments();
+    }
+  }, [user]);
 
   const fetchAppointments = async () => {
     try {
       let url = "/api/appointments";
-      if (isDoctorView) {
-      
-        url += "?doctor_id=1";
-      } else {
-      
-        url += "?patient_id=1";
+      if (isDoctorView && user?.doctor_id) {
+        url += `?doctor_id=${user.doctor_id}`;
+      } else if (user?.patient_id) {
+        url += `?patient_id=${user.patient_id}`;
       }
 
       const response = await fetch(url);
@@ -168,14 +170,18 @@ function AppointmentsContent() {
                         </span>
                         {appointment.status !== "cancelled" && (
                           <>
-                            <button
-                              onClick={() =>
-                                (window.location.href = `/appointments/${appointment.appointment_id}/reschedule`)
-                              }
-                              className="btn-primary text-sm"
-                            >
-                              Reprogramar
-                            </button>
+                            {/* Solo pacientes y admins pueden reprogramar */}
+                            {(isPatient || isAdmin) && !isDoctor && (
+                              <button
+                                onClick={() =>
+                                  (window.location.href = `/appointments/${appointment.appointment_id}/reschedule`)
+                                }
+                                className="btn-primary text-sm"
+                              >
+                                Reprogramar
+                              </button>
+                            )}
+                            {/* Todos pueden cancelar */}
                             <button
                               onClick={() =>
                                 handleCancelAppointment(

@@ -81,3 +81,15 @@ export interface AppointmentHistory {
   event_at: string;
   notes: string | null;
 }
+
+export interface Notification {
+  notification_id: number;
+  user_id: number;
+  appointment_id: number | null;
+  title: string;
+  message: string;
+  is_read: boolean;
+  created_at: string;
+  start_datetime?: string;
+  appointment_status?: string;
+}

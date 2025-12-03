@@ -4,9 +4,10 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthContext } from "@/hooks/AuthProvider";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import DoctorSpecialtiesManager from "@/components/DoctorSpecialtiesManager";
 
 export default function ProfilePage() {
-  const { user, loading: authLoading } = useAuthContext();
+  const { user, loading: authLoading, isDoctor } = useAuthContext();
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const router = useRouter();
@@ -191,6 +192,10 @@ export default function ProfilePage() {
                   </div>
                 </div>
               </div>
+
+              {isDoctor && user?.doctor_id && (
+                <DoctorSpecialtiesManager doctorId={user.doctor_id} />
+              )}
 
               <div className="bg-white rounded-xl shadow-sm p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-6">

@@ -8,6 +8,10 @@ const dbConfig = {
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0,
+  timeout: 60000, // 60 segundos timeout
+  acquireTimeout: 60000,
 };
 
 let pool: mysql.Pool;
@@ -34,4 +38,18 @@ export const getPool = () => {
     pool = mysql.createPool(dbConfig);
   }
   return pool;
+};
+
+// Helper para ejecutar queries de forma segura con manejo automático de conexiones
+export const executeQuery = async <T = any>(
+  sql: string,
+  params: any[] = []
+): Promise<T> => {
+  const connection = await getConnection();
+  try {
+    const [results] = await connection.execute(sql, params);
+    return results as T;
+  } finally {
+    connection.release();
+  }
 };

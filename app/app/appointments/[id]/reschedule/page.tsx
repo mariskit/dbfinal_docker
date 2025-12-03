@@ -2,19 +2,36 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useAuthContext } from "@/hooks/AuthProvider";
 import AppointmentForm from "@/components/AppointmentForm";
 
 export default function RescheduleAppointmentPage() {
   const params = useParams();
   const router = useRouter();
+  const { isPatient, isAdmin, isDoctor, loading: authLoading } = useAuthContext();
   const [appointment, setAppointment] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (params.id) {
+    if (!authLoading) {
+      // Solo pacientes y admins pueden reprogramar
+      if (isDoctor && !isAdmin) {
+        alert("Los médicos no pueden reprogramar citas");
+        router.push("/appointments");
+        return;
+      }
+      if (!isPatient && !isAdmin) {
+        router.push("/appointments");
+        return;
+      }
+    }
+  }, [authLoading, isPatient, isAdmin, isDoctor, router]);
+
+  useEffect(() => {
+    if (params.id && !authLoading) {
       fetchAppointment();
     }
-  }, [params.id]);
+  }, [params.id, authLoading]);
 
   const fetchAppointment = async () => {
     try {

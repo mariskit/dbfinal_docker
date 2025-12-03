@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useAuthContext } from "@/hooks/AuthProvider";
 
 interface Doctor {
   doctor_id: number;
@@ -9,6 +10,12 @@ interface Doctor {
   last_name: string;
   specialties: string;
   email: string;
+}
+
+interface Patient {
+  patient_id: number;
+  first_name: string;
+  last_name: string;
 }
 
 interface TimeSlot {
@@ -31,10 +38,13 @@ export default function AppointmentForm({
   initialData,
   onSuccess,
 }: AppointmentFormProps) {
+  const { user, isAdmin, isPatient } = useAuthContext();
   const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
   const [selectedDoctor, setSelectedDoctor] = useState(
     initialData?.doctor_id?.toString() || ""
   );
+  const [selectedPatient, setSelectedPatient] = useState("");
   const [selectedDate, setSelectedDate] = useState(
     initialData?.start_datetime
       ? new Date(initialData.start_datetime).toISOString().split("T")[0]
@@ -55,7 +65,12 @@ export default function AppointmentForm({
 
   useEffect(() => {
     fetchDoctors();
-  }, []);
+    if (isAdmin) {
+      fetchPatients();
+    } else if (isPatient && user?.patient_id) {
+      setSelectedPatient(user.patient_id.toString());
+    }
+  }, [isAdmin, isPatient, user]);
 
   useEffect(() => {
     if (initialData) {
@@ -83,6 +98,16 @@ export default function AppointmentForm({
       setDoctors(data);
     } catch (error) {
       console.error("Error fetching doctors:", error);
+    }
+  };
+
+  const fetchPatients = async () => {
+    try {
+      const response = await fetch("/api/patients");
+      const data = await response.json();
+      setPatients(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Error fetching patients:", error);
     }
   };
 
@@ -183,6 +208,18 @@ export default function AppointmentForm({
       return;
     }
 
+    // Validar que se haya seleccionado paciente si es admin
+    if (isAdmin && !selectedPatient) {
+      alert("Por favor seleccione un paciente");
+      return;
+    }
+
+    // Validar que haya paciente seleccionado para pacientes
+    if (isPatient && !user?.patient_id) {
+      alert("Error: No se pudo identificar el paciente");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -200,7 +237,7 @@ export default function AppointmentForm({
             start_datetime: startDatetime,
             end_datetime: endDatetime,
             reason: reason,
-            event_by_user_id: 1, // Usuario actual
+            event_by_user_id: user?.id || 1,
           }),
         });
 
@@ -218,13 +255,23 @@ export default function AppointmentForm({
         }
       } else {
         // Modo creación: crear nueva cita
+        const patientId = isAdmin 
+          ? parseInt(selectedPatient)
+          : (user?.patient_id || 1);
+
+        if (!patientId) {
+          alert("Error: No se pudo determinar el paciente");
+          setLoading(false);
+          return;
+        }
+
         const appointmentData = {
-          patient_id: 1, // En una app real, esto vendría del usuario logueado
+          patient_id: patientId,
           doctor_id: parseInt(selectedDoctor),
           start_datetime: startDatetime,
           end_datetime: endDatetime,
           reason: reason,
-          created_by_user_id: 1, // Usuario actual
+          created_by_user_id: user?.id || 1,
           channel: "web",
         };
 
@@ -277,6 +324,26 @@ export default function AppointmentForm({
       </h2>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Selector de paciente solo para administradores */}
+        {isAdmin && !isEditMode && (
+          <div>
+            <label className="form-label">Paciente</label>
+            <select
+              value={selectedPatient}
+              onChange={(e) => setSelectedPatient(e.target.value)}
+              className="form-input"
+              required
+            >
+              <option value="">Seleccione un paciente</option>
+              {patients.map((patient) => (
+                <option key={patient.patient_id} value={patient.patient_id}>
+                  {patient.first_name} {patient.last_name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <div>
           <label className="form-label">Médico</label>
           <select
@@ -418,7 +485,7 @@ export default function AppointmentForm({
           </button>
           <button
             type="submit"
-            disabled={loading || !selectedTime}
+            disabled={loading || !selectedTime || (isAdmin && !selectedPatient)}
             className="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading

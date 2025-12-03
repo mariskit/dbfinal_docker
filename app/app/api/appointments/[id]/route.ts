@@ -8,18 +8,9 @@ export async function GET(
   try {
     const connection = await getConnection();
 
+    // Usar vista optimizada para obtener cita completa
     const [appointments] = await connection.execute(
-      `SELECT a.*, 
-              p.first_name as patient_first_name, 
-              p.last_name as patient_last_name,
-              p.phone as patient_phone,
-              d.first_name as doctor_first_name, 
-              d.last_name as doctor_last_name,
-              d.doc_license as doctor_license
-       FROM Appointments a
-       LEFT JOIN Patients p ON a.patient_id = p.patient_id
-       LEFT JOIN Doctors d ON a.doctor_id = d.doctor_id
-       WHERE a.appointment_id = ?`,
+      `SELECT * FROM vw_AppointmentsComplete WHERE appointment_id = ?`,
       [params.id]
     );
 
@@ -51,12 +42,37 @@ export async function PUT(
       await request.json();
     const connection = await getConnection();
 
+    // Si solo se actualiza el estado, usar procedimiento optimizado
+    if (status && !start_datetime && !end_datetime) {
+      try {
+        await connection.query(
+          `CALL sp_UpdateAppointmentStatus(?, ?, ?, ?)`,
+          [params.id, status, event_by_user_id || null, null]
+        );
+
+        return NextResponse.json({
+          message: "Estado de cita actualizado exitosamente",
+        });
+      } catch (spError: any) {
+        console.warn("Stored procedure failed, using direct update:", spError);
+        // Fallback: actualizar directamente (los triggers manejarán el resto)
+        await connection.query(
+          `UPDATE Appointments SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE appointment_id = ?`,
+          [status, params.id]
+        );
+        return NextResponse.json({
+          message: "Estado de cita actualizado exitosamente",
+        });
+      }
+    }
+
+    // Si se cambian fechas, usar transacción manual (el trigger validará solapamiento)
     await connection.beginTransaction();
 
     try {
-      // Obtener cita actual para historial
+      // Obtener cita actual usando vista
       const [currentAppointments] = await connection.execute(
-        "SELECT * FROM Appointments WHERE appointment_id = ?",
+        "SELECT * FROM vw_AppointmentsComplete WHERE appointment_id = ?",
         [params.id]
       );
 
@@ -66,42 +82,7 @@ export async function PUT(
         throw new Error("Cita no encontrada");
       }
 
-      // Si se está cambiando la fecha/hora, validar que no haya solapamiento
-      if (start_datetime || end_datetime) {
-        const newStart = start_datetime || currentAppointment.start_datetime;
-        const newEnd = end_datetime || currentAppointment.end_datetime;
-
-        // Verificar solapamiento con otras citas del mismo médico
-        const [overlapping] = await connection.execute(
-          `SELECT appointment_id FROM Appointments 
-           WHERE doctor_id = ? 
-           AND appointment_id != ?
-           AND status != 'cancelled'
-           AND (
-             (start_datetime < ? AND end_datetime > ?) OR
-             (start_datetime < ? AND end_datetime > ?) OR
-             (start_datetime >= ? AND end_datetime <= ?)
-           )`,
-          [
-            currentAppointment.doctor_id,
-            params.id,
-            newEnd,
-            newStart,
-            newStart,
-            newEnd,
-            newStart,
-            newEnd,
-          ]
-        );
-
-        if ((overlapping as any[]).length > 0) {
-          throw new Error(
-            "El horario seleccionado se solapa con otra cita existente"
-          );
-        }
-      }
-
-      // Actualizar cita
+      // Actualizar cita (los triggers validarán automáticamente)
       const updateFields: string[] = [];
       const updateValues: any[] = [];
 
@@ -134,36 +115,6 @@ export async function PUT(
           )}, updated_at = CURRENT_TIMESTAMP WHERE appointment_id = ?`,
           updateValues
         );
-
-        // Registrar en historial
-        let eventType = "update";
-        let oldValue = "";
-        let newValue = "";
-
-        if (status && status !== currentAppointment.status) {
-          eventType = "status_change";
-          oldValue = `status=${currentAppointment.status}`;
-          newValue = `status=${status}`;
-        } else if (start_datetime || end_datetime) {
-          eventType = "reschedule";
-          oldValue = `start=${currentAppointment.start_datetime}|end=${currentAppointment.end_datetime}`;
-          newValue = `start=${
-            start_datetime || currentAppointment.start_datetime
-          }|end=${end_datetime || currentAppointment.end_datetime}`;
-        }
-
-        await connection.execute(
-          `INSERT INTO AppointmentHistory 
-           (appointment_id, event_type, old_value, new_value, event_by_user_id) 
-           VALUES (?, ?, ?, ?, ?)`,
-          [
-            params.id,
-            eventType,
-            oldValue,
-            newValue,
-            event_by_user_id || currentAppointment.created_by_user_id,
-          ]
-        );
       }
 
       await connection.commit();
@@ -171,15 +122,23 @@ export async function PUT(
       return NextResponse.json({
         message: "Cita actualizada exitosamente",
       });
-    } catch (error) {
+    } catch (error: any) {
       await connection.rollback();
       throw error;
     }
   } catch (error: any) {
     console.error("Error updating appointment:", error);
+    
+    let errorMessage = "Error interno del servidor";
+    if (error.message) {
+      errorMessage = error.message;
+    } else if (error.sqlMessage) {
+      errorMessage = error.sqlMessage;
+    }
+
     return NextResponse.json(
-      { error: error.message || "Error interno del servidor" },
-      { status: 500 }
+      { error: errorMessage },
+      { status: error.code === "ER_SIGNAL_EXCEPTION" ? 400 : 500 }
     );
   }
 }
