@@ -166,7 +166,7 @@ export default function PatientHistoryPage() {
           <div className="flex justify-between h-16">
             <div className="flex items-center">
               <button
-                onClick={() => router.push("/dashboard/page")}
+                onClick={() => router.push("/dashboard")}
                 className="text-blue-600 hover:text-blue-800 mr-4"
               >
                 ← Volver
