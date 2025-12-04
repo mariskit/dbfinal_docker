@@ -9,8 +9,17 @@ import Reports from "@/components/Reports";
 import SpecialtiesManagement from "@/components/SpecialtiesManagement";
 import AppointmentsManagement from "@/components/AppointmentsManagement";
 
+interface Doctor {
+  doctor_id: number;
+  first_name: string;
+  last_name: string;
+  specialties?: string;
+}
+
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("users");
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [selectedDoctorId, setSelectedDoctorId] = useState<number | null>(null);
   const { user, loading, isAdmin } = useAuthContext();
   const router = useRouter();
 
@@ -19,6 +28,26 @@ export default function AdminDashboard() {
       router.push("/dashboard");
     }
   }, [loading, user, isAdmin, router]);
+
+  const fetchDoctors = async () => {
+    try {
+      const response = await fetch("/api/doctors");
+      const data = await response.json();
+      setDoctors(data);
+      // Si hay médicos y no hay uno seleccionado, seleccionar el primero
+      if (data.length > 0 && !selectedDoctorId) {
+        setSelectedDoctorId(data[0].doctor_id);
+      }
+    } catch (error) {
+      console.error("Error fetching doctors:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "schedules") {
+      fetchDoctors();
+    }
+  }, [activeTab]);
 
   if (loading) {
     return (
@@ -106,7 +135,36 @@ export default function AdminDashboard() {
                 <p className="text-gray-600 mb-4">
                   Configure los horarios de atención de los médicos.
                 </p>
-                <DoctorSchedule doctorId={1} />
+                
+                {/* Selector de Médico */}
+                <div className="mb-6">
+                  <label htmlFor="doctor-select" className="block text-sm font-medium text-gray-700 mb-2">
+                    Seleccionar Médico:
+                  </label>
+                  <select
+                    id="doctor-select"
+                    value={selectedDoctorId || ""}
+                    onChange={(e) => setSelectedDoctorId(Number(e.target.value))}
+                    className="form-input max-w-md"
+                  >
+                    <option value="">-- Seleccione un médico --</option>
+                    {doctors.map((doctor) => (
+                      <option key={doctor.doctor_id} value={doctor.doctor_id}>
+                        {doctor.first_name} {doctor.last_name}
+                        {doctor.specialties ? ` - ${doctor.specialties}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Componente de Horarios */}
+                {selectedDoctorId ? (
+                  <DoctorSchedule doctorId={selectedDoctorId} />
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    Por favor, seleccione un médico para configurar sus horarios.
+                  </div>
+                )}
               </div>
             )}
 

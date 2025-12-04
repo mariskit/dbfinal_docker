@@ -648,31 +648,31 @@ INSERT IGNORE INTO Patients (user_id, first_name, last_name, birthdate, phone) V
 
 -- Doctores
 INSERT IGNORE INTO Doctors (user_id, first_name, last_name, doc_license, phone) VALUES
-((SELECT user_id FROM Users WHERE username='drgarcia'), 'Luis', 'García', 'MED12345', '+573003334455'),
-((SELECT user_id FROM Users WHERE username='drmartinez'), 'María', 'Martínez', 'MED54321', '+573003334466');
+((SELECT user_id FROM Users WHERE username='drgarcia'), 'Luis', 'Garcia', 'MED12345', '+573003334455'),
+((SELECT user_id FROM Users WHERE username='drmartinez'), 'Maria', 'Martinez', 'MED54321', '+573003334466');
 
 -- Especialidades
 INSERT IGNORE INTO Specialties (name, description) VALUES
-('Cardiología', 'Cardiología general'),
-('Pediatría', 'Pediatría general'),
-('Medicina General', 'Atención general');
+('Cardiologia', 'Cardiologia general'),
+('Pediatria', 'Pediatria general'),
+('Medicina General', 'Atencion general');
 
 -- Asignar especialidades
 INSERT IGNORE INTO DoctorSpecialties (doctor_id, specialty_id) VALUES
-((SELECT doctor_id FROM Doctors WHERE last_name='García'), (SELECT specialty_id FROM Specialties WHERE name='Cardiología')),
+((SELECT doctor_id FROM Doctors WHERE last_name='Garcia'), (SELECT specialty_id FROM Specialties WHERE name='Cardiologia')),
 ((SELECT doctor_id FROM Doctors WHERE last_name='Martínez'), (SELECT specialty_id FROM Specialties WHERE name='Medicina General'));
 
 -- Horarios
 INSERT IGNORE INTO DoctorSchedules (doctor_id, weekday, start_time, end_time, slot_duration_min) VALUES
-((SELECT doctor_id FROM Doctors WHERE last_name='García'), 1, '08:00:00', '12:00:00', 30),
-((SELECT doctor_id FROM Doctors WHERE last_name='García'), 3, '14:00:00', '18:00:00', 30),
-((SELECT doctor_id FROM Doctors WHERE last_name='Martínez'), 2, '09:00:00', '13:00:00', 20);
+((SELECT doctor_id FROM Doctors WHERE last_name='Garcia'), 1, '08:00:00', '12:00:00', 30),
+((SELECT doctor_id FROM Doctors WHERE last_name='Garcia'), 3, '14:00:00', '18:00:00', 30),
+((SELECT doctor_id FROM Doctors WHERE last_name='Martinez'), 2, '09:00:00', '13:00:00', 20);
 
 -- Cita de ejemplo
 INSERT IGNORE INTO Appointments (patient_id, doctor_id, start_datetime, end_datetime, reason, created_by_user_id, channel) 
 VALUES (
     (SELECT patient_id FROM Patients WHERE first_name='Juan'),
-    (SELECT doctor_id FROM Doctors WHERE last_name='García'),
+    (SELECT doctor_id FROM Doctors WHERE last_name='Garcia'),
     '2025-12-05 08:30:00',
     '2025-12-05 09:00:00',
     'Consulta cardiología - control',

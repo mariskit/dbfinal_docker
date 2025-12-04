@@ -21,9 +21,9 @@ const weekdays = [
   "Sábado",
 ];
 
-export default function DoctorSchedule({ doctorId }: { doctorId: number }) {
+export default function DoctorSchedule({ doctorId }: { doctorId: number | null }) {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     weekday: 1,
@@ -33,16 +33,34 @@ export default function DoctorSchedule({ doctorId }: { doctorId: number }) {
   });
 
   useEffect(() => {
-    fetchSchedules();
+    if (doctorId) {
+      setLoading(true);
+      fetchSchedules();
+      // Limpiar formulario cuando cambia el médico
+      setShowForm(false);
+      setFormData({
+        weekday: 1,
+        start_time: "08:00",
+        end_time: "17:00",
+        slot_duration_min: 30,
+      });
+    } else {
+      setSchedules([]);
+      setLoading(false);
+    }
   }, [doctorId]);
 
   const fetchSchedules = async () => {
+    if (!doctorId) return;
+    
     try {
+      setLoading(true);
       const response = await fetch(`/api/doctors/${doctorId}/schedules`);
       const data = await response.json();
       setSchedules(data);
     } catch (error) {
       console.error("Error fetching schedules:", error);
+      setSchedules([]);
     } finally {
       setLoading(false);
     }
@@ -102,6 +120,10 @@ export default function DoctorSchedule({ doctorId }: { doctorId: number }) {
 
   if (loading) {
     return <div className="loading-spinner mx-auto"></div>;
+  }
+
+  if (!doctorId) {
+    return null;
   }
 
   return (

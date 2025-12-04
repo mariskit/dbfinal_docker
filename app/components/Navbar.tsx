@@ -17,8 +17,8 @@ export default function Navbar() {
     router.push("/login");
   };
 
-  // No mostrar navbar en páginas de login
-  if (pathname === "/login") {
+  // No mostrar navbar en páginas de login y register
+  if (pathname === "/login" || pathname === "/register") {
     return null;
   }
 
